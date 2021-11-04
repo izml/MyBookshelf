@@ -14,7 +14,7 @@ def gitCommits = Integer.parseInt('git rev-list --count HEAD'.execute([], projec
 
 android {
     compileSdkVersion 29
-    buildToolsVersion '28.0.3'
+    buildToolsVersion '29.0.3'
     signingConfigs {
         myConfig {
             storeFile file(RELEASE_STORE_FILE)
@@ -115,6 +115,12 @@ dependencies {
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
     implementation 'com.squareup.retrofit2:adapter-rxjava2:2.9.0'
     implementation 'com.squareup.retrofit2:converter-scalars:2.9.0'
+
+    //OkHttp3
+    //noinspection GradleDependency
+    implementation ('com.squareup.okhttp3:okhttp:3.12.0'){
+        force true
+    }
 
     //J_SOUP
     implementation 'org.jsoup:jsoup:1.13.1'
