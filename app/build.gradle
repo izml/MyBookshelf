@@ -1,7 +1,7 @@
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply plugin: 'org.greenrobot.greendao'
-apply plugin: 'com.google.firebase.crashlytics'
+//apply plugin: 'com.google.firebase.crashlytics'
 apply plugin: "de.timfreiheit.resourceplaceholders"
 
 static def releaseTime() {
@@ -85,6 +85,7 @@ dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation project(':basemvplib')
 
+    // core-ktx 1.3.2 (1.6 minSdk=21)
     api 'androidx.core:core-ktx:1.3.2'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 
@@ -94,13 +95,14 @@ dependencies {
     implementation "org.jetbrains.anko:anko-sdk27-listeners:$anko_version"
 
     //fireBase
-    implementation 'com.google.firebase:firebase-analytics:18.0.0'
-    implementation 'com.google.firebase:firebase-crashlytics:17.3.0'
+    //implementation 'com.google.firebase:firebase-analytics:18.0.0'
+    //implementation 'com.google.firebase:firebase-crashlytics:17.3.0'
 
     //androidX
     implementation 'androidx.multidex:multidex:2.0.1'
-    implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.1'
     implementation 'androidx.cardview:cardview:1.0.0'
+    //media 1.3.1 (1.4+ minCompileSdk=30)
     implementation 'androidx.media:media:1.3.1'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
 
@@ -122,7 +124,7 @@ dependencies {
     implementation 'com.squareup.retrofit2:adapter-rxjava2:2.9.0'
     implementation 'com.squareup.retrofit2:converter-scalars:2.9.0'
 
-    //OkHttp3
+    //OkHttp3 3.12 (3.13+ minSdk=21)
     //noinspection GradleDependency
     implementation ('com.squareup.okhttp3:okhttp:3.12.0'){
         force true
@@ -143,7 +145,7 @@ dependencies {
 
     //Glide
     implementation 'com.github.bumptech.glide:glide:4.12.0'
-    annotationProcessor 'com.github.bumptech.glide:compiler:4.11.0'
+    annotationProcessor 'com.github.bumptech.glide:compiler:4.12.0'
 
     //CircleImageView
     implementation 'de.hdodenhof:circleimageview:3.1.0'
