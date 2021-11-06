@@ -55,6 +55,15 @@ object Restore {
     fun restore(path: String, callBack: CallBack?) {
         Single.create(SingleOnSubscribe<Boolean> { e ->
             try {
+                val file = FileHelp.createFileIfNotExist(path + File.separator + "myBookmark.json")
+                val json = file.readText()
+                GSON.fromJsonArray<BookmarkBean>(json)?.let {
+                    DbHelper.getDaoSession().bookmarkBeanDao.insertOrReplaceInTx(it)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            try {
                 val file = FileHelp.createFileIfNotExist(path + File.separator + "myBookShelf.json")
                 val json = file.readText()
                 GSON.fromJsonArray<BookShelfBean>(json)?.forEach { bookshelf ->

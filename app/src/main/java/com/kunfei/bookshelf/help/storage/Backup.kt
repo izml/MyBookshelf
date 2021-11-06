@@ -32,6 +32,7 @@ object Backup {
 
     val backupFileNames by lazy {
         arrayOf(
+                "myBookmark.json",
                 "myBookShelf.json",
                 "myBookSource.json",
                 "myBookSearchHistory.json",
@@ -57,6 +58,13 @@ object Backup {
     fun backup(context: Context, path: String, callBack: CallBack?, isAuto: Boolean = false) {
         MApplication.getConfigPreferences().edit().putLong("lastBackup", System.currentTimeMillis()).apply()
         Single.create(SingleOnSubscribe<Boolean> { e ->
+            DbHelper.getDaoSession().bookmarkBeanDao.queryBuilder().list().let {
+                if (it.isNotEmpty()) {
+                    val json = GSON.toJson(it)
+                    FileHelp.createFileIfNotExist(backupPath + File.separator + "myBookmark.json")
+                        .writeText(json)
+                }
+            }
             BookshelfHelp.getAllBook().let {
                 if (it.isNotEmpty()) {
                     val json = GSON.toJson(it)
