@@ -1,4 +1,4 @@
-package com.kunfei.bookshelf.help
+package com.kunfei.bookshelf.help.glide
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -14,7 +14,7 @@ object ImageLoader {
     fun load(context: Context, path: String?): RequestBuilder<Drawable> {
         return when {
             path.isNullOrEmpty() -> Glide.with(context).load(path)
-            path.startsWith("http", true) -> Glide.with(context).load(path)
+            path.startsWith("http", true) -> GlideApp.with(context).load(path)
             else -> try {
                 Glide.with(context).load(File(path))
             } catch (e: Exception) {

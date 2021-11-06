@@ -11,7 +11,7 @@ import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.kunfei.bookshelf.R
-import com.kunfei.bookshelf.help.ImageLoader
+import com.kunfei.bookshelf.help.glide.ImageLoader
 
 
 class CoverImageView : androidx.appcompat.widget.AppCompatImageView {
@@ -136,6 +136,7 @@ class CoverImageView : androidx.appcompat.widget.AppCompatImageView {
                             target: Target<Drawable>?,
                             isFirstResource: Boolean
                     ): Boolean {
+                        e?.printStackTrace()
                         loadFailed = true
                         return false
                     }
