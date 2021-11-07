@@ -434,7 +434,7 @@
     <string name="tip_padding">Tip边距</string>
     <string name="text_letter_spacing">字距</string>
     <string name="default_path">默认路径</string>
-    <string name="sys_folder_picker">系统文件夹选择器</string>
+    <string name="sys_folder_picker">系统文件夹选择器(Android5.0+)</string>
     <string name="app_folder_picker">自带选择器\n(Android10以上因权限限制可能无法使用)</string>
     <string name="a10_permission_toast">Android10以上因权限限制可能无法读写文件</string>
     <string name="e_ink_mode">E-Ink 模式</string>

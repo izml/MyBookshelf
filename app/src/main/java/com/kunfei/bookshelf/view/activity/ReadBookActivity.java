@@ -11,6 +11,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Configuration;
+import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.net.Uri;
 import android.os.BatteryManager;
@@ -18,7 +19,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.text.TextUtils;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -59,14 +59,14 @@ import com.kunfei.bookshelf.model.analyzeRule.AnalyzeUrl;
 import com.kunfei.bookshelf.presenter.ReadBookPresenter;
 import com.kunfei.bookshelf.presenter.contract.ReadBookContract;
 import com.kunfei.bookshelf.service.ReadAloudService;
+import com.kunfei.bookshelf.utils.ActivityExtensionsKt;
 import com.kunfei.bookshelf.utils.BatteryUtil;
+import com.kunfei.bookshelf.utils.ColorUtils;
 import com.kunfei.bookshelf.utils.NetworkUtils;
 import com.kunfei.bookshelf.utils.ScreenUtils;
 import com.kunfei.bookshelf.utils.SoftInputUtil;
 import com.kunfei.bookshelf.utils.StringUtils;
 import com.kunfei.bookshelf.utils.SystemUtil;
-import com.kunfei.bookshelf.utils.bar.BarHide;
-import com.kunfei.bookshelf.utils.bar.ImmersionBar;
 import com.kunfei.bookshelf.utils.theme.ATH;
 import com.kunfei.bookshelf.utils.theme.ThemeStore;
 import com.kunfei.bookshelf.view.dialog.SourceLoginDialog;
@@ -105,7 +105,7 @@ import kotlin.Unit;
  */
 public class ReadBookActivity extends MBaseActivity<ReadBookContract.Presenter> implements ReadBookContract.View, View.OnTouchListener {
 
-    private int payActivityResult = 1234;
+    private final int payActivityResult = 1234;
     private ActivityBookReadBinding binding;
     private Animation menuTopIn;
     private Animation menuTopOut;
@@ -195,57 +195,51 @@ public class ReadBookActivity extends MBaseActivity<ReadBookContract.Presenter> 
      */
     @Override
     protected void initImmersionBar() {
-        super.initImmersionBar();
+        ActivityExtensionsKt.fullScreen(this);
+        int flag = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                | View.SYSTEM_UI_FLAG_IMMERSIVE
+                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+        flag = flag | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
         if (readBookControl.getHideNavigationBar()) {
-            mImmersionBar.fullScreen(true);
-            if (ImmersionBar.hasNavigationBar(this)) {
-                binding.readMenuBottom.setNavigationBarHeight(ImmersionBar.getNavigationBarHeight(this));
+            flag = flag | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION;
+            if (binding.readMenuBottom.getVisibility() != View.VISIBLE) {
+                flag = flag | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
             }
         }
-
-        if (binding.readMenuBottom.getVisibility() == View.VISIBLE) {
-            if (isImmersionBarEnabled() && !isNightTheme()) {
-                mImmersionBar.statusBarDarkFont(true, 0.2f);
-            } else {
-                mImmersionBar.statusBarDarkFont(false);
+        if (readBookControl.getHideStatusBar()) {
+            if (binding.readMenuBottom.getVisibility() != View.VISIBLE) {
+                flag = flag | View.SYSTEM_UI_FLAG_FULLSCREEN;
             }
-            mImmersionBar.hideBar(BarHide.FLAG_SHOW_BAR);
-            changeNavigationBarColor(false);
-        } else {
-            if (!isImmersionBarEnabled()) {
-                mImmersionBar.statusBarDarkFont(false);
-            } else if (readBookControl.getDarkStatusIcon()) {
-                mImmersionBar.statusBarDarkFont(true, 0.2f);
-            } else {
-                mImmersionBar.statusBarDarkFont(false);
-            }
-
-            if (readBookControl.getHideStatusBar() && readBookControl.getHideNavigationBar()) {
-                mImmersionBar.hideBar(BarHide.FLAG_HIDE_BAR);
-            } else if (readBookControl.getHideStatusBar()) {
-                mImmersionBar.hideBar(BarHide.FLAG_HIDE_STATUS_BAR);
-                changeNavigationBarColor(true);
-            } else if (readBookControl.getHideNavigationBar()) {
-                mImmersionBar.hideBar(BarHide.FLAG_HIDE_NAVIGATION_BAR);
-            } else {
-                mImmersionBar.hideBar(BarHide.FLAG_SHOW_BAR);
-                changeNavigationBarColor(true);
-            }
-
         }
-
-        mImmersionBar.init();
+        getWindow().getDecorView().setSystemUiVisibility(flag);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            if (binding.readMenuBottom.getVisibility() == View.VISIBLE) {
+                if (isImmersionBarEnabled()) {
+                    ActivityExtensionsKt.setStatusBarColorAuto(this, ThemeStore.primaryColor(this), false, true);
+                } else {
+                    ActivityExtensionsKt.setStatusBarColorAuto(this, ColorUtils.darkenColor(ThemeStore.primaryColor(this)), false, true);
+                }
+                changeNavigationBarColor();
+            } else {
+                if (isImmersionBarEnabled()) {
+                    getWindow().setStatusBarColor(Color.TRANSPARENT);
+                    ActivityExtensionsKt.setLightStatusBar(this, readBookControl.getDarkStatusIcon());
+                } else {
+                    getWindow().setStatusBarColor(getResources().getColor(R.color.ate_switch_track_normal_light));
+                    ActivityExtensionsKt.setLightStatusBar(this, false);
+                }
+            }
+        }
+        changeNavigationBarColor();
         screenOffTimerStart();
     }
 
     /**
      * 修改导航栏颜色
      */
-    private void changeNavigationBarColor(boolean hideBarDivider) {
-        if (hideBarDivider) {
-            mImmersionBar.hideBarDivider();
-        } else {
-            mImmersionBar.showBarDivider();
+    private void changeNavigationBarColor() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            getWindow().setNavigationBarDividerColor(Color.TRANSPARENT);
         }
         int barColorType = readBookControl.getNavBarColor();
         if (binding.readMenuBottom.getVisibility() == View.VISIBLE
@@ -257,19 +251,13 @@ public class ReadBookActivity extends MBaseActivity<ReadBookContract.Presenter> 
         }
         switch (barColorType) {
             case 1:
-                mImmersionBar.navigationBarDarkFont(false, 0.2f);
-                mImmersionBar.navigationBarColor(R.color.black);
+                ActivityExtensionsKt.setNavigationBarColorAuto(this, getResources().getColor(R.color.black));
                 break;
             case 2:
-                mImmersionBar.navigationBarDarkFont(true, 0.2f);
-                mImmersionBar.navigationBarColor(R.color.white);
+                ActivityExtensionsKt.setNavigationBarColorAuto(this, getResources().getColor(R.color.white));
                 break;
             case 3:
-                mImmersionBar.navigationBarDarkFont(readBookControl.getDarkStatusIcon(), 0.2f);
-                mImmersionBar.navigationBarColorInt(readBookControl.getBgColor());
-                break;
-            default:
-
+                ActivityExtensionsKt.setNavigationBarColorAuto(this, readBookControl.getBgColor());
                 break;
         }
     }
@@ -390,6 +378,8 @@ public class ReadBookActivity extends MBaseActivity<ReadBookContract.Presenter> 
             public void onAnimationEnd(Animation animation) {
                 binding.vMenuBg.setOnClickListener(v -> popMenuOut());
                 initImmersionBar();
+                int nbh = ActivityExtensionsKt.getNavigationBarHeight(ReadBookActivity.this);
+                binding.readMenuBottom.setNavigationBarHeight(nbh);
             }
 
             @Override
@@ -516,7 +506,7 @@ public class ReadBookActivity extends MBaseActivity<ReadBookContract.Presenter> 
             mPresenter.getBookShelf().setDurChapterPage(0);
             mPageLoader.skipToNextPage();
         });
-        binding.mediaPlayerPop.setCallback(dur -> ReadAloudService.setProgress(ReadBookActivity.this, (long) dur));
+        binding.mediaPlayerPop.setCallback(dur -> ReadAloudService.setProgress(ReadBookActivity.this, dur));
     }
 
     /**
@@ -758,12 +748,8 @@ public class ReadBookActivity extends MBaseActivity<ReadBookContract.Presenter> 
                 toast(R.string.can_not_open);
             }
         });
-        binding.login.setOnClickListener(v -> {
-            login();
-        });
-        binding.pay.setOnClickListener(v -> {
-            pay();
-        });
+        binding.login.setOnClickListener(v -> login());
+        binding.pay.setOnClickListener(v -> pay());
         binding.cursorLeft.setOnTouchListener(this);
         binding.cursorRight.setOnTouchListener(this);
         binding.flContent.setOnTouchListener(this);
@@ -847,12 +833,10 @@ public class ReadBookActivity extends MBaseActivity<ReadBookContract.Presenter> 
                         binding.readMenuBottom.getReadProgress().setMax(Math.max(0, count - 1));
                         binding.readMenuBottom.getReadProgress().setProgress(0);
                         // 如果处于错误状态，那么就冻结使用
-                        if (mPageLoader.getPageStatus() == TxtChapter.Status.LOADING
-                                || mPageLoader.getPageStatus() == TxtChapter.Status.ERROR) {
-                            binding.readMenuBottom.getReadProgress().setEnabled(false);
-                        } else {
-                            binding.readMenuBottom.getReadProgress().setEnabled(true);
-                        }
+                        binding.readMenuBottom.getReadProgress().setEnabled(
+                                mPageLoader.getPageStatus() != TxtChapter.Status.LOADING
+                                        && mPageLoader.getPageStatus() != TxtChapter.Status.ERROR
+                        );
                     }
 
                     /**
@@ -963,8 +947,6 @@ public class ReadBookActivity extends MBaseActivity<ReadBookContract.Presenter> 
 
         if (v.getId() == R.id.cursor_left || v.getId() == R.id.cursor_right) {
             int ea = event.getAction();
-            //final int screenWidth = dm.widthPixels;
-            //final int screenHeight = dm.heightPixels;
             switch (ea) {
                 case MotionEvent.ACTION_DOWN:
                     lastX = (int) event.getRawX();// 获取触摸事件触摸位置的原始X坐标
@@ -1046,6 +1028,7 @@ public class ReadBookActivity extends MBaseActivity<ReadBookContract.Presenter> 
         hideSnackBar();
     }
 
+    @SuppressWarnings("ConstantConditions")
     private void cursorShow() {
 
         binding.cursorLeft.setVisibility(View.VISIBLE);
@@ -1097,7 +1080,7 @@ public class ReadBookActivity extends MBaseActivity<ReadBookContract.Presenter> 
                                 ReplaceRuleManager.saveData(replaceRuleBean1)
                                         .subscribe(new MySingleObserver<Boolean>() {
                                             @Override
-                                            public void onSuccess(Boolean aBoolean) {
+                                            public void onSuccess(@NonNull Boolean aBoolean) {
                                                 binding.cursorLeft.setVisibility(View.INVISIBLE);
                                                 binding.cursorRight.setVisibility(View.INVISIBLE);
                                                 binding.readLongPress.setVisibility(View.INVISIBLE);
@@ -1135,8 +1118,6 @@ public class ReadBookActivity extends MBaseActivity<ReadBookContract.Presenter> 
                             selectString.replaceAll(rule, "\n")
                     );
 
-                    Log.i("selectString.afterAd2", selectString);
-
                 }
 
                 ReplaceRuleBean oldRuleBean = new ReplaceRuleBean();
@@ -1146,14 +1127,14 @@ public class ReadBookActivity extends MBaseActivity<ReadBookContract.Presenter> 
                 oldRuleBean.setIsRegex(false);
                 oldRuleBean.setReplacement("");
                 oldRuleBean.setSerialNumber(0);
-                oldRuleBean.setUseTo(String.format(mPresenter.getBookShelf().getTag()));
+                oldRuleBean.setUseTo(mPresenter.getBookShelf().getTag());
 
                 ReplaceRuleDialog.builder(ReadBookActivity.this, oldRuleBean, mPresenter.getBookShelf(), ReplaceRuleDialog.AddAdUI)
                         .setPositiveButton(replaceRuleBean1 ->
                                 ReplaceRuleManager.mergeAdRules(replaceRuleBean1)
                                         .subscribe(new MySingleObserver<Boolean>() {
                                             @Override
-                                            public void onSuccess(Boolean aBoolean) {
+                                            public void onSuccess(@NonNull Boolean aBoolean) {
                                                 binding.cursorLeft.setVisibility(View.INVISIBLE);
                                                 binding.cursorRight.setVisibility(View.INVISIBLE);
                                                 binding.readLongPress.setVisibility(View.INVISIBLE);
@@ -1275,6 +1256,7 @@ public class ReadBookActivity extends MBaseActivity<ReadBookContract.Presenter> 
                 webIntent.putExtra("url", result);
                 webIntent.putExtra("title", "购买");
                 BitIntentDataManager.getInstance().putData(result, mPresenter.getBookSource().getHeaderMap(true));
+                //noinspection deprecation
                 startActivityForResult(webIntent, payActivityResult);
             }
         }
@@ -1569,7 +1551,7 @@ public class ReadBookActivity extends MBaseActivity<ReadBookContract.Presenter> 
                             mPresenter.getBookShelf().getDurChapterName(),
                             mPresenter.getBookShelf().getReplaceEnable()),
                     mPresenter.getBookShelf().isAudio(),
-                    (long) mPresenter.getBookShelf().getDurChapterPage());
+                    mPresenter.getBookShelf().getDurChapterPage());
         }
     }
 
@@ -1806,27 +1788,20 @@ public class ReadBookActivity extends MBaseActivity<ReadBookContract.Presenter> 
             binding.atvLine.setVisibility(View.GONE);
         }
         for (int i = 0; i < menu.size(); i++) {
-            switch (menu.getItem(i).getGroupId()) {
-                case R.id.menuOnLine:
-                    menu.getItem(i).setVisible(onLine);
-                    menu.getItem(i).setEnabled(onLine);
-                    break;
-                case R.id.menuLocal:
-                    menu.getItem(i).setVisible(!onLine);
-                    menu.getItem(i).setEnabled(!onLine);
-                    break;
-                case R.id.menu_text:
-                    boolean isTxt = mPresenter.getBookShelf() != null && mPresenter.getBookShelf().getNoteUrl().toLowerCase().endsWith(".txt");
-                    menu.getItem(i).setVisible(isTxt);
-                    menu.getItem(i).setEnabled(isTxt);
-                    break;
+            int groupId = menu.getItem(i).getGroupId();
+            if (groupId == R.id.menuOnLine) {
+                menu.getItem(i).setVisible(onLine);
+                menu.getItem(i).setEnabled(onLine);
+            } else if (groupId == R.id.menuLocal) {
+                menu.getItem(i).setVisible(!onLine);
+                menu.getItem(i).setEnabled(!onLine);
+            } else if (groupId == R.id.menu_text) {
+                boolean isTxt = mPresenter.getBookShelf() != null && mPresenter.getBookShelf().getNoteUrl().toLowerCase().endsWith(".txt");
+                menu.getItem(i).setVisible(isTxt);
+                menu.getItem(i).setEnabled(isTxt);
             }
             if (menu.getItem(i).getItemId() == R.id.enable_replace) {
-                if (mPresenter.getBookShelf() != null && mPresenter.getBookShelf().getReplaceEnable()) {
-                    menu.getItem(i).setChecked(true);
-                } else {
-                    menu.getItem(i).setChecked(false);
-                }
+                menu.getItem(i).setChecked(mPresenter.getBookShelf() != null && mPresenter.getBookShelf().getReplaceEnable());
             }
         }
 
