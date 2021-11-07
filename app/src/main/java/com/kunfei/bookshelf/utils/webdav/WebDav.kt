@@ -119,10 +119,10 @@ constructor(urlStr: String) {
         }
         httpUrl?.let { url ->
             val request = Request.Builder()
-                    .url(url)
-                    // 添加RequestBody对象，可以只返回的属性。如果设为null，则会返回全部属性
-                    // 注意：尽量手动指定需要返回的属性。若返回全部属性，可能后由于Prop.java里没有该属性名，而崩溃。
-                    .method("PROPFIND", RequestBody.create(MediaType.parse("text/plain"), requestPropsStr))
+                .url(url)
+                // 添加RequestBody对象，可以只返回的属性。如果设为null，则会返回全部属性
+                // 注意：尽量手动指定需要返回的属性。若返回全部属性，可能后由于Prop.java里没有该属性名，而崩溃。
+                .method("PROPFIND", RequestBody.create(MediaType.parse("text/plain"), requestPropsStr))
 
             HttpAuth.auth?.let {
                 request.header(
@@ -237,7 +237,8 @@ constructor(urlStr: String) {
                 request.header("Authorization", Credentials.basic(it.user, it.pass))
             }
             try {
-                return BaseModelImpl.getClient().newCall(request.build()).execute().body()?.byteStream()
+                return BaseModelImpl.getClient().newCall(request.build())
+                    .execute().body()?.byteStream()
             } catch (e: IOException) {
                 e.printStackTrace()
             } catch (e: IllegalArgumentException) {

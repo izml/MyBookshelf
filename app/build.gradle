@@ -101,11 +101,19 @@ dependencies {
 
     //androidX
     implementation 'androidx.multidex:multidex:2.0.1'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.1'
     implementation 'androidx.cardview:cardview:1.0.0'
     //media 1.3.1 (1.4+ minCompileSdk=30)
     implementation 'androidx.media:media:1.3.1'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+
+    def exoplayer_version = '2.15.0'
+    implementation "com.google.android.exoplayer:exoplayer-core:$exoplayer_version"
+    //extension-okhttp 2.14.2 (2.15.0 minSdk=21)
+    implementation "com.google.android.exoplayer:extension-okhttp:2.14.2"
+    implementation "com.google.android.exoplayer:exoplayer-hls:$exoplayer_version"
+    implementation "com.google.android.exoplayer:exoplayer-smoothstreaming:$exoplayer_version"
+    implementation "com.google.android.exoplayer:exoplayer-dash:$exoplayer_version"
+    implementation "com.google.android.exoplayer:exoplayer-rtsp:$exoplayer_version"
 
     //google
     implementation 'com.google.android.material:material:1.4.0'
@@ -182,7 +190,7 @@ dependencies {
 }
 
 greendao {
-    schemaVersion 65
+    schemaVersion 66
     daoPackage 'com.kunfei.bookshelf.dao'
     targetGenDir 'src/main/java'
 }
