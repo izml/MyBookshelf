@@ -54,15 +54,20 @@ okhttp3 response属性为私有改回方法
 | response.message | response.message() |
 | response.code    | response.code()    |
 
-### 2. `toMediaType`
+### 2. `WebDav`
 
-toMediaType 需要 okhttp3 4.0+，改回旧代码
+需要 okhttp3 4.0+，改回旧代码
 
 `app/src/main/java/com/kunfei/bookshelf/utils/webdav/WebDav.kt`
 
 ```java
-//import okhttp3.MediaType.Companion.toMediaType
-.toMediaType() => MediaType.parse()
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
+
+toRequestBody() => RequestBody.create();
+asRequestBody() => RequestBody.create();
+.toMediaType() => MediaType.parse();
 ```
 
 # 功能增加

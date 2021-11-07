@@ -1,7 +1,10 @@
 //Copyright (c) 2017. 章钦豪. All rights reserved.
 package com.kunfei.bookshelf.bean;
 
+import android.content.Context;
+
 import com.google.gson.Gson;
+import com.kunfei.bookshelf.R;
 import com.kunfei.bookshelf.help.BookshelfHelp;
 
 import org.greenrobot.greendao.annotation.Entity;
@@ -22,7 +25,8 @@ public class BookChapterBean implements Cloneable, BaseChapterBean {
     @Id
     private String durChapterUrl;  //当前章节对应的文章地址
     private String durChapterName;  //当前章节名称
-
+    private boolean isVip;
+    private boolean isPay;
     //章节内容在文章中的起始位置(本地)
     private Long start;
     //章节内容在文章中的终止位置(本地)
@@ -31,14 +35,16 @@ public class BookChapterBean implements Cloneable, BaseChapterBean {
     public BookChapterBean() {
     }
 
-    @Generated(hash = 304828234)
+    @Generated(hash = 922679906)
     public BookChapterBean(String tag, String noteUrl, int durChapterIndex, String durChapterUrl, String durChapterName,
-                           Long start, Long end) {
+                           boolean isVip, boolean isPay, Long start, Long end) {
         this.tag = tag;
         this.noteUrl = noteUrl;
         this.durChapterIndex = durChapterIndex;
         this.durChapterUrl = durChapterUrl;
         this.durChapterName = durChapterName;
+        this.isVip = isVip;
+        this.isPay = isPay;
         this.start = start;
         this.end = end;
     }
@@ -47,6 +53,14 @@ public class BookChapterBean implements Cloneable, BaseChapterBean {
         this.tag = tag;
         this.durChapterName = durChapterName;
         this.durChapterUrl = durChapterUrl;
+    }
+
+    public BookChapterBean(String tag, String durChapterName, String durChapterUrl, boolean isVip, boolean isPay) {
+        this.tag = tag;
+        this.durChapterName = durChapterName;
+        this.durChapterUrl = durChapterUrl;
+        this.isVip = isVip;
+        this.isPay = isPay;
     }
 
     @Override
@@ -141,6 +155,32 @@ public class BookChapterBean implements Cloneable, BaseChapterBean {
 
     public Boolean getHasCache(BookInfoBean bookInfoBean) {
         return BookshelfHelp.isChapterCached(bookInfoBean.getName(), tag, this, bookInfoBean.isAudio());
+    }
+
+    public boolean getIsVip() {
+        return this.isVip;
+    }
+
+    public void setIsVip(boolean isVip) {
+        this.isVip = isVip;
+    }
+
+    public boolean getIsPay() {
+        return this.isPay;
+    }
+
+    public void setIsPay(boolean isPay) {
+        this.isPay = isPay;
+    }
+
+    public String getDisplayTitle(Context context) {
+        if (!isVip) {
+            return durChapterName;
+        }
+        if (isPay) {
+            return context.getString(R.string.payed_title, durChapterName);
+        }
+        return context.getString(R.string.vip_title, durChapterName);
     }
 
 }

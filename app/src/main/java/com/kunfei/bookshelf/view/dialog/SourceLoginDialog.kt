@@ -6,21 +6,22 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.TextView
 import androidx.core.os.bundleOf
+import androidx.core.view.setPadding
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
 import com.google.android.material.textfield.TextInputLayout
 import com.kunfei.bookshelf.R
 import com.kunfei.bookshelf.databinding.DialogLoginBinding
 import com.kunfei.bookshelf.model.BookSourceManager
-import com.kunfei.bookshelf.utils.GSON
-import com.kunfei.bookshelf.utils.RxUtils
-import com.kunfei.bookshelf.utils.fromJsonArray
+import com.kunfei.bookshelf.utils.*
 import com.kunfei.bookshelf.utils.theme.ThemeStore
 import com.kunfei.bookshelf.utils.viewbindingdelegate.viewBinding
 import io.reactivex.Single
 import io.reactivex.SingleObserver
 import io.reactivex.disposables.Disposable
+import org.jetbrains.anko.sdk27.listeners.onClick
 
 class SourceLoginDialog : DialogFragment() {
 
@@ -87,6 +88,24 @@ class SourceLoginDialog : DialogFragment() {
                             setText(loginInfo?.get(rowUi.name))
                         }
                     }
+                "button" -> layoutInflater.inflate(
+                    R.layout.item_find2_childer_view,
+                    binding.root,
+                    false
+                )
+                    .let {
+                        binding.listView.addView(it)
+                        it.id = index
+                        (it as TextView).let { textView ->
+                            textView.text = rowUi.name
+                            textView.setPadding(DensityUtil.dp2px(requireContext(), 16f))
+                        }
+                        it.onClick {
+                            if (rowUi.action.isAbsUrl()) {
+                                context?.openUrl(rowUi.action!!)
+                            }
+                        }
+                    }
             }
         }
         binding.toolBar.inflateMenu(R.menu.menu_source_login)
@@ -101,6 +120,7 @@ class SourceLoginDialog : DialogFragment() {
                                     .findViewById<EditText>(R.id.editText).text?.toString()
                                 loginData[rowUi.name] = value
                             }
+
                         }
                     }
                     source.putLoginInfo(loginData)
@@ -134,6 +154,7 @@ class SourceLoginDialog : DialogFragment() {
     data class RowUi(
         var name: String,
         var type: String,
+        var action: String?
     )
 
 }
