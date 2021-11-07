@@ -40,6 +40,7 @@ import com.kunfei.bookshelf.base.MBaseActivity;
 import com.kunfei.bookshelf.base.observer.MySingleObserver;
 import com.kunfei.bookshelf.bean.BookChapterBean;
 import com.kunfei.bookshelf.bean.BookShelfBean;
+import com.kunfei.bookshelf.bean.BookSourceBean;
 import com.kunfei.bookshelf.bean.BookmarkBean;
 import com.kunfei.bookshelf.bean.ReplaceRuleBean;
 import com.kunfei.bookshelf.bean.TxtChapterRuleBean;
@@ -52,6 +53,7 @@ import com.kunfei.bookshelf.help.permission.PermissionsCompat;
 import com.kunfei.bookshelf.help.storage.Backup;
 import com.kunfei.bookshelf.model.ReplaceRuleManager;
 import com.kunfei.bookshelf.model.TxtChapterRuleManager;
+import com.kunfei.bookshelf.model.analyzeRule.AnalyzeUrl;
 import com.kunfei.bookshelf.presenter.ReadBookPresenter;
 import com.kunfei.bookshelf.presenter.contract.ReadBookContract;
 import com.kunfei.bookshelf.service.ReadAloudService;
@@ -65,6 +67,7 @@ import com.kunfei.bookshelf.utils.bar.BarHide;
 import com.kunfei.bookshelf.utils.bar.ImmersionBar;
 import com.kunfei.bookshelf.utils.theme.ATH;
 import com.kunfei.bookshelf.utils.theme.ThemeStore;
+import com.kunfei.bookshelf.view.dialog.SourceLoginDialog;
 import com.kunfei.bookshelf.view.popupwindow.CheckAddShelfPop;
 import com.kunfei.bookshelf.view.popupwindow.MoreSettingPop;
 import com.kunfei.bookshelf.view.popupwindow.ReadAdjustMarginPop;
@@ -1102,12 +1105,12 @@ public class ReadBookActivity extends MBaseActivity<ReadBookContract.Presenter> 
                                 spacer = spacer + "|" + Pattern.quote(name.trim());
                             else
                                 spacer = "|" + Pattern.quote(name.trim());
-                            String rule="(\\s*\n\\s*" + spacer + ")";
+                    String rule = "(\\s*\n\\s*" + spacer + ")";
                     selectString = ReplaceRuleManager.formateAdRule(
                             selectString.replaceAll(rule, "\n")
                     );
 
-                    Log.i("selectString.afterAd2",selectString);
+                    Log.i("selectString.afterAd2", selectString);
 
                 }
 
@@ -1205,7 +1208,15 @@ public class ReadBookActivity extends MBaseActivity<ReadBookContract.Presenter> 
         } else if (id == R.id.action_set_regex) {
             setTextChapterRegex();
         } else if (id == R.id.action_login) {
-            SourceLoginActivity.startThis(this, mPresenter.getBookSource());
+            BookSourceBean bookSourceBean = mPresenter.getBookSource();
+            if (TextUtils.isEmpty(bookSourceBean.getLoginUi())) {
+                SourceLoginActivity.startThis(this, bookSourceBean);
+            } else {
+                SourceLoginDialog.Companion.start(
+                        getSupportFragmentManager(),
+                        bookSourceBean.getBookSourceUrl()
+                );
+            }
         } else if (id == android.R.id.home) {
             finish();
         }
@@ -1483,6 +1494,16 @@ public class ReadBookActivity extends MBaseActivity<ReadBookContract.Presenter> 
     private void readAloud() {
         aloudNextPage = false;
         String unReadContent = mPageLoader.getUnReadContent();
+        if (mPresenter.getBookShelf().isAudio()) {
+            try {
+                unReadContent = new AnalyzeUrl(unReadContent,
+                        mPresenter.getBookSource().getBookSourceUrl(),
+                        mPresenter.getBookSource(),
+                        mPresenter.getBookSource().getHeaderMap(true)).getRuleUrl();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
         if (mPresenter.getBookShelf() != null && mPageLoader != null && !StringUtils.isTrimEmpty(unReadContent)) {
             ReadAloudService.play(ReadBookActivity.this, false, unReadContent,
                     mPresenter.getBookShelf().getBookInfoBean().getName(),

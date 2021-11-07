@@ -2,27 +2,47 @@ package com.kunfei.bookshelf.view.dialog
 
 import android.os.Bundle
 import android.text.InputType
-import android.util.Base64
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
+import androidx.core.os.bundleOf
 import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.FragmentManager
 import com.google.android.material.textfield.TextInputLayout
 import com.kunfei.bookshelf.R
-import com.kunfei.bookshelf.bean.CookieBean
-import com.kunfei.bookshelf.bean.LoginRule
-import com.kunfei.bookshelf.constant.AppConstant
 import com.kunfei.bookshelf.databinding.DialogLoginBinding
-import com.kunfei.bookshelf.utils.EncoderUtils
+import com.kunfei.bookshelf.model.BookSourceManager
 import com.kunfei.bookshelf.utils.GSON
+import com.kunfei.bookshelf.utils.RxUtils
+import com.kunfei.bookshelf.utils.fromJsonArray
 import com.kunfei.bookshelf.utils.theme.ThemeStore
 import com.kunfei.bookshelf.utils.viewbindingdelegate.viewBinding
-import com.kunfei.bookshelf.widget.views.ATEEditText
+import io.reactivex.Single
+import io.reactivex.SingleObserver
+import io.reactivex.disposables.Disposable
 
 class SourceLoginDialog : DialogFragment() {
 
+    companion object {
+        fun start(fragmentManager: FragmentManager, sourceUrl: String) {
+            SourceLoginDialog().apply {
+                arguments = bundleOf(
+                    Pair("sourceUrl", sourceUrl)
+                )
+            }.show(fragmentManager, "sourceLoginDialog")
+        }
+    }
+
     val binding by viewBinding(DialogLoginBinding::bind)
+
+    override fun onStart() {
+        super.onStart()
+        dialog?.window?.setLayout(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -35,19 +55,37 @@ class SourceLoginDialog : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.toolBar.setBackgroundColor(ThemeStore.primaryColor(requireContext()))
+        binding.toolBar.title = getString(R.string.login)
         val sourceUrl = arguments?.getString("sourceUrl")
-        val loginRule = arguments?.getParcelable<LoginRule>("loginRule")
-        loginRule?.ui?.forEachIndexed { index, rowUi ->
+        val source = BookSourceManager.getBookSourceByUrl(sourceUrl)
+        source ?: let {
+            dismiss()
+            return
+        }
+        binding.toolBar.title = getString(R.string.login_source, source.bookSourceName)
+        val loginInfo = source.loginInfoMap
+        val loginUi = GSON.fromJsonArray<RowUi>(source.loginUi)
+        loginUi?.forEachIndexed { index, rowUi ->
             when (rowUi.type) {
-                "text" -> layoutInflater.inflate(R.layout.item_source_edit, binding.root)
-                    .apply {
-                        id = index
+                "text" -> layoutInflater.inflate(R.layout.item_source_edit, binding.root, false)
+                    .let {
+                        binding.listView.addView(it)
+                        it.id = index
+                        (it as TextInputLayout).hint = rowUi.name
+                        it.findViewById<EditText>(R.id.editText).apply {
+                            setText(loginInfo?.get(rowUi.name))
+                        }
                     }
-                "password" -> layoutInflater.inflate(R.layout.item_source_edit, binding.root)
-                    .apply {
-                        id = index
-                        findViewById<ATEEditText>(R.id.editText)?.inputType =
-                            InputType.TYPE_TEXT_VARIATION_PASSWORD or InputType.TYPE_CLASS_TEXT
+                "password" -> layoutInflater.inflate(R.layout.item_source_edit, binding.root, false)
+                    .let {
+                        binding.listView.addView(it)
+                        it.id = index
+                        (it as TextInputLayout).hint = rowUi.name
+                        it.findViewById<EditText>(R.id.editText).apply {
+                            inputType =
+                                InputType.TYPE_TEXT_VARIATION_PASSWORD or InputType.TYPE_CLASS_TEXT
+                            setText(loginInfo?.get(rowUi.name))
+                        }
                     }
             }
         }
@@ -56,29 +94,46 @@ class SourceLoginDialog : DialogFragment() {
             when (it.itemId) {
                 R.id.action_check -> {
                     val loginData = hashMapOf<String, String?>()
-                    loginRule?.ui?.forEachIndexed { index, rowUi ->
+                    loginUi?.forEachIndexed { index, rowUi ->
                         when (rowUi.type) {
                             "text", "password" -> {
-                                val value = binding.root.findViewById<TextInputLayout>(index)
+                                val value = binding.listView.findViewById<TextInputLayout>(index)
                                     .findViewById<EditText>(R.id.editText).text?.toString()
                                 loginData[rowUi.name] = value
                             }
                         }
                     }
-                    val data = Base64.encodeToString(
-                        EncoderUtils.decryptAES(
-                            GSON.toJson(loginData).toByteArray(),
-                            AppConstant.androidId(requireContext()).toByteArray()
-                        ),
-                        Base64.DEFAULT
-                    )
-                    CookieBean("login_$sourceUrl", data)
-                    dismiss()
+                    source.putLoginInfo(loginData)
+                    Single.create<String> { emitter ->
+                        source.loginUrl?.let { loginUrl ->
+                            emitter.onSuccess(source.evalJS(loginUrl).toString())
+                        } ?: let {
+                            emitter.onError(Throwable(""))
+                        }
+                    }.compose(RxUtils::toSimpleSingle)
+                        .subscribe(object : SingleObserver<String> {
+
+                            override fun onSubscribe(d: Disposable) {
+
+                            }
+
+                            override fun onSuccess(t: String) {
+                                dismiss()
+                            }
+
+                            override fun onError(e: Throwable) {
+
+                            }
+                        })
                 }
             }
             return@setOnMenuItemClickListener true
         }
     }
 
+    data class RowUi(
+        var name: String,
+        var type: String,
+    )
 
 }

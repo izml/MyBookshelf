@@ -1,11 +1,15 @@
 package com.kunfei.bookshelf.bean;
 
 import static android.text.TextUtils.isEmpty;
+import static com.kunfei.bookshelf.constant.AppConstant.MAP_STRING;
+import static com.kunfei.bookshelf.constant.AppConstant.SCRIPT_ENGINE;
 
 import android.text.TextUtils;
 
 import com.google.gson.Gson;
-import com.kunfei.bookshelf.utils.GsonUtils;
+import com.kunfei.bookshelf.DbHelper;
+import com.kunfei.bookshelf.help.JsExtensions;
+import com.kunfei.bookshelf.model.analyzeRule.AnalyzeHeaders;
 import com.kunfei.bookshelf.utils.StringUtils;
 
 import org.greenrobot.greendao.annotation.Entity;
@@ -16,20 +20,27 @@ import org.greenrobot.greendao.annotation.OrderBy;
 import org.greenrobot.greendao.annotation.Transient;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
+
+import javax.script.SimpleBindings;
 
 /**
  * Created by GKF on 2017/12/14.
  * 书源信息
  */
+@SuppressWarnings("unused")
 @Entity
-public class BookSourceBean implements Cloneable {
+public class BookSourceBean implements Cloneable, JsExtensions {
     @Id
     private String bookSourceUrl;
     private String bookSourceName;
     private String bookSourceGroup;
     private String bookSourceType;
     private String loginUrl;
+    private String loginUi;
+    private String loginCheckJs;
     private Long lastUpdateTime;
     @OrderBy
     private int serialNumber;
@@ -81,10 +92,10 @@ public class BookSourceBean implements Cloneable {
     @Transient
     private transient ArrayList<String> groupList;
 
-    @Generated(hash = 243497779)
-    public BookSourceBean(String bookSourceUrl, String bookSourceName, String bookSourceGroup, String bookSourceType, String loginUrl, Long lastUpdateTime, int serialNumber, int weight, boolean enable, String ruleFindUrl, String ruleFindList,
-                          String ruleFindName, String ruleFindAuthor, String ruleFindKind, String ruleFindIntroduce, String ruleFindLastChapter, String ruleFindCoverUrl, String ruleFindNoteUrl, String ruleSearchUrl, String ruleSearchList,
-                          String ruleSearchName, String ruleSearchAuthor, String ruleSearchKind, String ruleSearchIntroduce, String ruleSearchLastChapter, String ruleSearchCoverUrl, String ruleSearchNoteUrl, String ruleBookUrlPattern,
+    @Generated(hash = 1482292520)
+    public BookSourceBean(String bookSourceUrl, String bookSourceName, String bookSourceGroup, String bookSourceType, String loginUrl, String loginUi, String loginCheckJs, Long lastUpdateTime, int serialNumber, int weight, boolean enable,
+                          String ruleFindUrl, String ruleFindList, String ruleFindName, String ruleFindAuthor, String ruleFindKind, String ruleFindIntroduce, String ruleFindLastChapter, String ruleFindCoverUrl, String ruleFindNoteUrl, String ruleSearchUrl,
+                          String ruleSearchList, String ruleSearchName, String ruleSearchAuthor, String ruleSearchKind, String ruleSearchIntroduce, String ruleSearchLastChapter, String ruleSearchCoverUrl, String ruleSearchNoteUrl, String ruleBookUrlPattern,
                           String ruleBookInfoInit, String ruleBookName, String ruleBookAuthor, String ruleCoverUrl, String ruleIntroduce, String ruleBookKind, String ruleBookLastChapter, String ruleChapterUrl, String ruleChapterUrlNext,
                           String ruleChapterList, String ruleChapterName, String ruleContentUrl, String ruleContentUrlNext, String ruleBookContent, String ruleBookContentReplace, String httpUserAgent) {
         this.bookSourceUrl = bookSourceUrl;
@@ -92,6 +103,8 @@ public class BookSourceBean implements Cloneable {
         this.bookSourceGroup = bookSourceGroup;
         this.bookSourceType = bookSourceType;
         this.loginUrl = loginUrl;
+        this.loginUi = loginUi;
+        this.loginCheckJs = loginCheckJs;
         this.lastUpdateTime = lastUpdateTime;
         this.serialNumber = serialNumber;
         this.weight = weight;
@@ -643,21 +656,6 @@ public class BookSourceBean implements Cloneable {
         this.ruleBookContentReplace = ruleBookContentReplace;
     }
 
-    @Transient
-    private LoginRule loginRule = null;
-
-    public LoginRule getLoginRule() {
-        if (loginRule == null) {
-            if (StringUtils.isJsonObject(loginUrl)) {
-                loginRule = GsonUtils.parseJObject(loginUrl, LoginRule.class);
-            } else {
-                loginRule = new LoginRule();
-                loginRule.setUrl(loginUrl);
-            }
-        }
-        return loginRule;
-    }
-
     public String getJson(int maxLength) {
         try {
             String source = getMinJson(false);
@@ -720,5 +718,111 @@ public class BookSourceBean implements Cloneable {
         } catch (Exception ignored) {
         }
         return "";
+    }
+
+    public String getLoginUi() {
+        return loginUi;
+    }
+
+    public void setLoginUi(String loginUi) {
+        this.loginUi = loginUi;
+    }
+
+    public String getLoginCheckJs() {
+        return loginCheckJs;
+    }
+
+    public void setLoginCheckJs(String loginCheckJs) {
+        this.loginCheckJs = loginCheckJs;
+    }
+
+
+    /**
+     * 执行JS
+     */
+    public Object evalJS(String jsStr) throws Exception {
+        try {
+            SimpleBindings bindings = new SimpleBindings();
+            bindings.put("java", this);
+            bindings.put("source", this);
+            bindings.put("baseUrl", bookSourceUrl);
+            return SCRIPT_ENGINE.eval(jsStr, bindings);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return e.getLocalizedMessage();
+        }
+    }
+
+    public Map<String, String> getHeaderMap(Boolean hasLoginHeader) {
+        Map<String, String> headerMap = new HashMap<>();
+        String headers = getHttpUserAgent();
+        if (!isEmpty(headers)) {
+            if (StringUtils.isJsonObject(headers)) {
+                Map<String, String> map = new Gson().fromJson(headers, MAP_STRING);
+                headerMap.putAll(map);
+            } else {
+                headerMap.put("User-Agent", headers);
+            }
+        } else {
+            headerMap.put("User-Agent", AnalyzeHeaders.getDefaultUserAgent());
+        }
+        CookieBean cookie = DbHelper.getDaoSession().getCookieBeanDao().load(bookSourceUrl);
+        if (cookie != null) {
+            headerMap.put("Cookie", cookie.getCookie());
+        }
+        if (hasLoginHeader) {
+            headerMap.putAll(getLoginHeaderMap());
+        }
+        return headerMap;
+    }
+
+    /**
+     * @return 登录头, Map格式
+     */
+    public Map<String, String> getLoginHeaderMap() {
+        Map<String, String> headerMap = new HashMap<>();
+        String header = getLoginHeader();
+        if (header != null) {
+            Map<String, String> map = new Gson().fromJson(header, MAP_STRING);
+            if (map != null) {
+                headerMap.putAll(map);
+            }
+        }
+        return headerMap;
+    }
+
+    public String getLoginHeader() {
+        CookieBean cookie = DbHelper.getDaoSession().getCookieBeanDao().load("loginHeader_" + bookSourceUrl);
+        if (cookie == null) {
+            return null;
+        }
+        return cookie.getCookie();
+    }
+
+    public void putLoginHeader(String value) {
+        CookieBean cookie = new CookieBean("loginHeader_" + bookSourceUrl, value);
+        DbHelper.getDaoSession().getCookieBeanDao().insertOrReplace(cookie);
+    }
+
+    public String getLoginInfo() {
+        CookieBean cookie = DbHelper.getDaoSession().getCookieBeanDao().load("loginInfo_" + bookSourceUrl);
+        return cookie.getCookie();
+    }
+
+    /**
+     * @return 用户登录信息
+     */
+    public Map<String, String> getLoginInfoMap() {
+        String info = getLoginInfo();
+        if (info != null) {
+            return new Gson().fromJson(info, MAP_STRING);
+        }
+        return null;
+    }
+
+    public void putLoginInfo(Map<String, String> info) {
+        String json = new Gson().toJson(info);
+        CookieBean cookieBean = new CookieBean("loginInfo_" + bookSourceUrl, json);
+        DbHelper.getDaoSession().getCookieBeanDao().insertOrReplace(cookieBean);
     }
 }

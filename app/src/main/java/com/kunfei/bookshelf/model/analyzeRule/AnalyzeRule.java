@@ -84,11 +84,6 @@ public class AnalyzeRule implements JsExtensions {
         return this;
     }
 
-    @Override
-    public BookSourceBean getBookSource() {
-        return bookSource;
-    }
-
     public String getBaseUrl() {
         return this.baseUrl;
     }
@@ -387,31 +382,6 @@ public class AnalyzeRule implements JsExtensions {
     }
 
     /**
-     * 替换JS
-     */
-    @SuppressLint("DefaultLocale")
-    private String replaceJs(String ruleStr) throws Exception {
-        if (ruleStr.contains("{{") && ruleStr.contains("}}")) {
-            Object jsEval;
-            StringBuffer sb = new StringBuffer(ruleStr.length());
-            Matcher expMatcher = EXP_PATTERN.matcher(ruleStr);
-            while (expMatcher.find()) {
-                jsEval = evalJS(expMatcher.group(1), object);
-                if (jsEval instanceof String) {
-                    expMatcher.appendReplacement(sb, (String) jsEval);
-                } else if (jsEval instanceof Double && ((Double) jsEval) % 1.0 == 0) {
-                    expMatcher.appendReplacement(sb, String.format("%.0f", (Double) jsEval));
-                } else {
-                    expMatcher.appendReplacement(sb, String.valueOf(jsEval));
-                }
-            }
-            expMatcher.appendTail(sb);
-            ruleStr = sb.toString();
-        }
-        return ruleStr;
-    }
-
-    /**
      * 分解规则生成规则列表
      */
     public List<SourceRule> splitSourceRule(String ruleStr) throws Exception {
@@ -436,8 +406,6 @@ public class AnalyzeRule implements JsExtensions {
         ruleStr = splitPutRule(ruleStr);
         //替换get值
         ruleStr = replaceGet(ruleStr);
-        //替换js
-        ruleStr = replaceJs(ruleStr);
         //拆分为列表
         int start = 0;
         String tmp;
@@ -464,14 +432,14 @@ public class AnalyzeRule implements JsExtensions {
     /**
      * 规则类
      */
-    public static class SourceRule {
+    public class SourceRule {
         Mode mode;
         String rule;
         String replaceRegex = "";
         String replacement = "";
         boolean replaceFirst = false;
 
-        SourceRule(String ruleStr, Mode mainMode) {
+        SourceRule(String ruleStr, Mode mainMode) throws Exception {
             this.mode = mainMode;
             if (mode == Mode.Js) {
                 if (ruleStr.startsWith("<js>")) {
@@ -495,6 +463,8 @@ public class AnalyzeRule implements JsExtensions {
                 } else {
                     rule = ruleStr;
                 }
+                //替换js
+                rule = replaceJs(rule);
                 //分离正则表达式
                 String[] ruleStrS = rule.trim().split("##");
                 rule = ruleStrS[0];
@@ -508,6 +478,31 @@ public class AnalyzeRule implements JsExtensions {
                     replaceFirst = true;
                 }
             }
+        }
+
+        /**
+         * 替换JS
+         */
+        @SuppressLint("DefaultLocale")
+        private String replaceJs(String ruleStr) throws Exception {
+            if (ruleStr.contains("{{") && ruleStr.contains("}}")) {
+                Object jsEval;
+                StringBuffer sb = new StringBuffer(ruleStr.length());
+                Matcher expMatcher = EXP_PATTERN.matcher(ruleStr);
+                while (expMatcher.find()) {
+                    jsEval = evalJS(expMatcher.group(1), object);
+                    if (jsEval instanceof String) {
+                        expMatcher.appendReplacement(sb, (String) jsEval);
+                    } else if (jsEval instanceof Double && ((Double) jsEval) % 1.0 == 0) {
+                        expMatcher.appendReplacement(sb, String.format("%.0f", (Double) jsEval));
+                    } else {
+                        expMatcher.appendReplacement(sb, String.valueOf(jsEval));
+                    }
+                }
+                expMatcher.appendTail(sb);
+                ruleStr = sb.toString();
+            }
+            return ruleStr;
         }
 
     }
@@ -536,9 +531,10 @@ public class AnalyzeRule implements JsExtensions {
     /**
      * 执行JS
      */
-    private Object evalJS(String jsStr, Object result) throws Exception {
+    public Object evalJS(String jsStr, Object result) throws Exception {
         SimpleBindings bindings = new SimpleBindings();
         bindings.put("java", this);
+        bindings.put("source", bookSource);
         bindings.put("result", result);
         bindings.put("baseUrl", baseUrl);
         return SCRIPT_ENGINE.eval(jsStr, bindings);

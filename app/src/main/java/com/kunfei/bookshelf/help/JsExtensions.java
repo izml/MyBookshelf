@@ -2,8 +2,8 @@ package com.kunfei.bookshelf.help;
 
 import com.kunfei.bookshelf.DbHelper;
 import com.kunfei.bookshelf.base.BaseModelImpl;
-import com.kunfei.bookshelf.bean.BookSourceBean;
 import com.kunfei.bookshelf.bean.CookieBean;
+import com.kunfei.bookshelf.model.analyzeRule.AnalyzeHeaders;
 import com.kunfei.bookshelf.model.analyzeRule.AnalyzeUrl;
 import com.kunfei.bookshelf.utils.StringUtils;
 
@@ -20,14 +20,12 @@ import retrofit2.Response;
 @SuppressWarnings({"unused", "WeakerAccess"})
 public interface JsExtensions {
 
-    BookSourceBean getBookSource();
-
     /**
      * js实现跨域访问,不能删
      */
     default String ajax(String urlStr) {
         try {
-            AnalyzeUrl analyzeUrl = new AnalyzeUrl(urlStr, getBookSource().getBookSourceUrl());
+            AnalyzeUrl analyzeUrl = new AnalyzeUrl(urlStr, AnalyzeHeaders.getDefaultHeader());
             Response<String> response = BaseModelImpl.getInstance().getResponseO(analyzeUrl)
                     .blockingFirst();
             return response.body();
@@ -41,7 +39,7 @@ public interface JsExtensions {
      */
     default Response<String> getResponse(String urlStr) {
         try {
-            AnalyzeUrl analyzeUrl = new AnalyzeUrl(urlStr, getBookSource().getBookSourceUrl());
+            AnalyzeUrl analyzeUrl = new AnalyzeUrl(urlStr, AnalyzeHeaders.getDefaultHeader());
             return BaseModelImpl.getInstance().getResponseO(analyzeUrl)
                     .blockingFirst();
         } catch (Exception e) {
@@ -105,19 +103,6 @@ public interface JsExtensions {
 
     default String getCache(String key) {
         CookieBean cookie = DbHelper.getDaoSession().getCookieBeanDao().load(key);
-        if (cookie == null) {
-            return null;
-        }
-        return cookie.getCookie();
-    }
-
-    default void putLoginHeader(String value) {
-        CookieBean cookie = new CookieBean("loginHeader_" + getBookSource().getBookSourceUrl(), value);
-        DbHelper.getDaoSession().getCookieBeanDao().insertOrReplace(cookie);
-    }
-
-    default String getLoginHeader() {
-        CookieBean cookie = DbHelper.getDaoSession().getCookieBeanDao().load("loginHeader_" + getBookSource().getBookSourceUrl());
         if (cookie == null) {
             return null;
         }
