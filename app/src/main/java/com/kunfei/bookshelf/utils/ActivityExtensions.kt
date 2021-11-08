@@ -56,7 +56,6 @@ fun Activity.fullScreen() {
         WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS
                 or WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION
     )
-    //FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS minSdk=21
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
     }
@@ -71,7 +70,6 @@ fun Activity.setStatusBarColorAuto(
     fullScreen: Boolean
 ) {
     val isLightBar = ColorUtils.isColorLight(color)
-    //statusBarColor minSdk=21
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
         if (fullScreen) {
             if (isTransparent) {
@@ -121,7 +119,6 @@ fun Activity.setLightStatusBar(isLightBar: Boolean) {
  */
 fun Activity.setNavigationBarColorAuto(@ColorInt color: Int) {
     val isLightBor = ColorUtils.isColorLight(color)
-    //navigationBarColor minSdk=21
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
         window.navigationBarColor = color
     }
